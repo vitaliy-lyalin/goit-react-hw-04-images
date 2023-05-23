@@ -22,20 +22,6 @@ export const App = () => {
   const [isShowModal, setIsShowModal] = useState(false);
   const [error, setError] = useState(null);
 
-  // componentDidUpdate(prevProps, prevState) {
-  //   const { query, page, gallery } = this.state;
-
-  //   // console.log(prevState.searchQuery);
-  //   if ((prevState.query !== query && query) || prevState.page !== page) {
-  //     this.getImages();
-  //   }
-  //   if (gallery !== prevState.gallery && page > 1) {
-  //     setTimeout(() => {
-  //       window.scrollBy(0, window.innerHeight / 2);
-  //     }, 250);
-  //   }
-  // }
-
   useEffect(() => {
     if (query) {
       setIsLoading(true);
