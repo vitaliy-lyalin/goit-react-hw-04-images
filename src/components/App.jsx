@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 
 import { Button } from './Button/Button';
@@ -11,136 +11,121 @@ import { ErrorPage } from './ErrorPage/ErrorPage';
 import { Container } from './App.styled';
 import { fetchImages } from 'services/fetch';
 
-export class App extends Component {
-  state = {
-    query: '',
-    page: 1,
-    gallery: [],
-    totalHits: null,
-    largeImage: '',
-    tags: '',
-    isLoading: false,
-    isShowModal: false,
-    error: null,
-  };
+export const App = () => {
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [gallery, setGallery] = useState([]);
+  const [totalHits, setTotalHits] = useState(null);
+  const [largeImage, setLargeImage] = useState('');
+  const [tags, setTags] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isShowModal, setIsShowModal] = useState(false);
+  const [error, setError] = useState(null);
 
-  componentDidUpdate(prevProps, prevState) {
-    const { query, page, gallery } = this.state;
+  // componentDidUpdate(prevProps, prevState) {
+  //   const { query, page, gallery } = this.state;
 
-    // console.log(prevState.searchQuery);
-    if ((prevState.query !== query && query) || prevState.page !== page) {
-      this.getImages();
+  //   // console.log(prevState.searchQuery);
+  //   if ((prevState.query !== query && query) || prevState.page !== page) {
+  //     this.getImages();
+  //   }
+  //   if (gallery !== prevState.gallery && page > 1) {
+  //     setTimeout(() => {
+  //       window.scrollBy(0, window.innerHeight / 2);
+  //     }, 250);
+  //   }
+  // }
+
+  useEffect(() => {
+    if (query) {
+      setIsLoading(true);
+      setError(null);
+
+      fetchImages(query, page)
+        .then(data => {
+          // console.log(data.hits);
+          // console.log(data.totalHits);
+          const hits = data.hits;
+          const totalHits = data.totalHits;
+
+          if (hits.length === 0) {
+            notifyNoImages();
+          }
+          if (hits.length && page === 1) notifySuccess(totalHits);
+
+          setGallery(prevGallery => [...prevGallery, ...hits]);
+          setIsLoading(false);
+          setTotalHits(totalHits);
+        })
+        .catch(error => setError(error.message))
+        .finally(() => setIsLoading(false));
     }
-    if (gallery !== prevState.gallery && page > 1) {
-      setTimeout(() => {
-        window.scrollBy(0, window.innerHeight / 2);
-      }, 250);
-    }
-  }
-  getImages = () => {
-    const { query, page } = this.state;
-    this.setState({ isLoading: true, error: null });
-    fetchImages(query, page)
-      .then(data => {
-        // console.log(data.hits);
-        // console.log(data.totalHits);
-        const hits = data.hits;
-        const totalHits = data.totalHits;
+  }, [page, query]);
 
-        if (hits.length === 0) {
-          this.notifyNoImages();
-        }
-        if (hits.length && page === 1) this.notifySuccess(totalHits);
-
-        this.setState(prev => ({
-          gallery: [...prev.gallery, ...hits],
-          isLoading: false,
-          totalHits,
-        }));
-      })
-      .catch(error => {
-        this.setState({ error: error.message });
-      })
-      .finally(() => {
-        this.setState({ isLoading: false });
-      });
-  };
-
-  handleSearch = query => {
+  const handleSearch = query => {
     if (!query) {
-      this.notifyInputQuery();
+      notifyInputQuery();
     }
-    this.setState({
-      query,
-      page: 1,
-      gallery: [],
-      totalHits: null,
-      isLoading: false,
-      error: null,
-    });
+    setQuery(query);
+    setPage(1);
+    setGallery([]);
+    setTotalHits(null);
+    setIsLoading(false);
+    setError(null);
   };
 
-  handleLoadMore = () => {
-    this.setState(prev => ({ page: prev.page + 1 }));
+  const handleLoadMore = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  hideModal = () => {
-    this.setState({ isShowModal: false, largeImage: null, tags: null });
+  const hideModal = () => {
+    setIsShowModal(false);
+    setLargeImage(null);
+    setTags(null);
   };
 
-  showModal = (url, alt) =>
-    this.setState({ isShowModal: true, largeImage: url, tags: alt });
+  const showModal = (url, alt) => {
+    setIsShowModal(true);
+    setLargeImage(url);
+    setTags(alt);
+  };
 
-  notifyInputQuery = () => {
+  const notifyInputQuery = () => {
     toast('Please enter a search query!', {
-      position: 'top-right',
-      autoClose: 3000,
       style: { background: '#FF0000' },
     });
   };
-  notifyNoImages = () => {
+  const notifyNoImages = () => {
     toast('No images were found for your request.', {
-      position: 'top-right',
-      autoClose: 3000,
       style: { background: '	#FF8C00' },
     });
   };
 
-  notifySuccess = total => {
+  const notifySuccess = total => {
     toast(`${total} images were found for your query`, {
-      position: 'top-right',
-      autoClose: 3000,
       style: { background: '	#32CD32' },
     });
   };
 
-  render() {
-    const {
-      gallery,
-      isLoading,
-      largeImage,
-      tags,
-      isShowModal,
-      totalHits,
-      error,
-    } = this.state;
-    return (
-      <Container>
-        <Searchbar onSubmit={this.handleSearch} />
-        {isLoading && <Loader />}
+  return (
+    <Container>
+      <Searchbar onSubmit={handleSearch} />
+      {isLoading && <Loader />}
 
-        {error && <ErrorPage text={` ${error}`} />}
-        {gallery.length > 0 && (
-          <ImageGallery gallery={gallery} showModal={this.showModal} />
-        )}
-        {gallery.length > 0 && !isLoading && gallery.length < totalHits && (
-          <Button onClick={this.handleLoadMore} />
-        )}
-        {isShowModal && (
-          <Modal url={largeImage} alt={tags} hideModal={this.hideModal} />
-        )}
-        <Toaster />
-      </Container>
-    );
-  }
-}
+      {error && <ErrorPage text={` ${error}`} />}
+      {gallery.length > 0 && (
+        <ImageGallery gallery={gallery} showModal={showModal} />
+      )}
+      {gallery.length > 0 && !isLoading && gallery.length < totalHits && (
+        <Button onClick={handleLoadMore} />
+      )}
+      {isShowModal && (
+        <Modal url={largeImage} alt={tags} hideModal={hideModal} />
+      )}
+      <Toaster
+        position="top-right"
+        toastOptions={{ className: '', duration: 3000 }}
+      />
+    </Container>
+  );
+};
